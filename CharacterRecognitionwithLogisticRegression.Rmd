@@ -1,0 +1,118 @@
+---
+title: "Character Recognition with Logistic Regression"
+author: "Parthasarathi Samantaray"
+date: "21/01/2019"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Character Recognition with Logistic Regression
+I have loaded the tidyverse package to use the functionalities as and when required.
+
+```{r}
+library(tidyverse)
+```
+
+
+I have set the working directory to the folder with the 2 datasets. After looking at the data sets, I found that there is no heading in the CSV files. So, I have used the read.csv function with header = FALSE to load the datasets and saved as variables named train and test respectively.  
+
+```{r}
+train <- read.csv("mnist_train.csv", header = FALSE)
+test <- read.csv("mnist_test.csv", header = FALSE)
+```
+Checking the dimension and variables names using the functions dim(), head() and colnames(). The variables are named from V1 till V785 with V1 containing the digit labels. 
+```{r}
+head(train,1)
+```
+There are 60000 rows in training data set and 10000 rows in the test data set.
+
+```{r}
+#str(train)
+```
+```{r}
+train%>% dim()
+test%>% dim() 
+
+test %>% colnames()
+```
+I have renamed the column V1 as Label for better readability and tested the update using the colnames() function.
+```{r}
+# Rename a columns in Train and test 
+
+colnames(train)[colnames(train)=="V1"] <- "Label"
+colnames(test)[colnames(test)=="V1"] <- "Label"
+
+test %>% colnames()
+
+```
+I have used the 2 provided function definitions rotate and plot_matrix to view one of the rows in the training dataset.
+
+```{r}
+rotate <- function(x) {
+  return(t(apply(x, 2, rev)))
+}
+plot_matrix <- function(vec) {
+  q <- matrix(vec, 28, 28, byrow = TRUE)
+  nq <- apply(q, 2, as.numeric)
+  image(rotate(nq), col = gray((0:255)/255))
+}
+
+```
+
+```{r}
+train[34,-1] %>% plot_matrix()
+```
+I checked the current distribution of digits in both the 2 data sets using table() function. 
+```{r}
+table(train$Label)
+table(test$Label)
+
+```
+I renamed the labels as 1 if the digit is 9 or 0 otherwise. I checked the distribution of 0's and 1's as per earlier distribution and both the distributions are consistent. 
+
+```{r}
+
+train$Label = ifelse(train$Label==9 ,1,0)
+test$Label = ifelse(test$Label==9 ,1,0)
+
+table(train$Label)
+table(test$Label) 
+```
+I trained the Logistic Regression Model with formula Label = F(Pixel1, Pixel2, Pixel3, ., Pixel 784) and as there are 2 output values, used family as binomial with the logit link. I have saved the model as charRecog.glm. 
+
+```{r}
+
+charRecog.glm <- glm(Label ~ . ,data = train, family = binomial())
+
+```
+From the summary, I found there 72 pixels/variables are don't add any information to the model. These variables have coefficients as NA and the summary comes with the warning "72 not defined because of singularities".
+
+```{r}
+summary(charRecog.glm)
+```
+Using the above model, I have predicted the digits with inputs from test dataset and saved as testPredict. 
+
+```{r}
+testPredict<-predict(charRecog.glm,newdata = test[,2:785],type = "response")
+```
+
+```{r}
+summary(testPredict)
+```
+By assuming the probability higher than 0.5  is predicted as digit 9(1 in the current model), the confusion matrix of this model as follows:- 
+
+```{r}
+table(test$Label,testPredict>.5)
+
+```
+```{r}
+print(paste("The Sensitivity of the model is : ",8799/(8799+233)))
+print(paste("The Specificity of the model is : ",776/(766+192)))
+
+```
